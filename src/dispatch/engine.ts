@@ -16,9 +16,10 @@ export function assignFirstAvailable(
   orders: DropBuddyOrder[],
   drivers: Driver[],
   now = Date.now(),
-): { orders: DropBuddyOrder[]; drivers: Driver[] } {
+): { orders: DropBuddyOrder[]; drivers: Driver[]; changed: boolean } {
   const nextOrders = orders.map((o) => ({ ...o }))
   const nextDrivers = drivers.map((d) => ({ ...d }))
+  let changed = false
 
   for (const order of nextOrders) {
     if (order.status !== 'pending') continue
@@ -33,9 +34,10 @@ export function assignFirstAvailable(
     order.deliveryBatchId = `batch-solo-${order.id}`
     driver.isAvailable = false
     driver.activeDeliveryId = order.deliveryBatchId
+    changed = true
   }
 
-  return { orders: nextOrders, drivers: nextDrivers }
+  return { orders: nextOrders, drivers: nextDrivers, changed }
 }
 
 /**

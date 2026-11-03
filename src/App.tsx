@@ -1,183 +1,98 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Circle, MapContainer, Marker, Polyline, Popup, TileLayer, Tooltip } from 'react-leaflet'
 import type { LatLngExpression } from 'leaflet'
+import { AdminPanel } from './admin/AdminPanel'
+import {
+  DEFAULT_SHOP_CONFIG,
+  DELIVERY_MS_PER_MILE,
+  EMPTY_PREP_CATALOG,
+  MIN_DELIVERY_MS,
+  MILES_TO_METERS,
+} from './domain/defaults'
+import type { Driver, DropBuddyOrder, PrepCatalog, ShopConfig } from './domain/types'
+import { assignFirstAvailable } from './dispatch/engine'
+import { IntakePanel } from './intake/IntakePanel'
+import { deliveryDurationMs, pointWithinRadiusMiles } from './sim/geo'
 import './App.css'
 
-type OrderStatus = 'pending' | 'en-route' | 'delivered'
-type Order = {
-  id: string
-  customerName: string
-  location: [number, number]
-  items: string[]
-  orderedAt: number
-  expectedFulfilmentAt: number
-  status: OrderStatus
-  assignedDriverId?: string
-  /** When the driver picked up / left for delivery (used for travel time). */
-  assignedAt?: number
-  deliveredAt?: number
-}
-type Driver = {
-  id: string
-  name: string
-  isAvailable: boolean
-  currentLocation: [number, number]
-  activeOrderId?: string
-}
+type Tab = 'operations' | 'admin' | 'intake'
 
-const RESTAURANT_LOCATION: [number, number] = [55.8797, -4.3112]
-const MILES_TO_METERS = 1609.34
-/** Base simulated travel at speed multiplier 1: duration scales with distance (miles). */
-const DELIVERY_MS_PER_MILE = 12_000
-const MIN_DELIVERY_MS = 3_000
-const EARTH_RADIUS_MILES = 3958.8
-const MENU_ITEMS = ['Margherita Pizza', 'Pepperoni Pizza', 'Chicken Burger', 'Veggie Wrap', 'Fries', 'Caesar Salad', 'Garlic Bread', 'Cheesecake']
+const MENU_ITEMS = [
+  'Margherita Pizza',
+  'Pepperoni Pizza',
+  'Chicken Burger',
+  'Veggie Wrap',
+  'Fries',
+  'Caesar Salad',
+  'Garlic Bread',
+  'Cheesecake',
+]
 const CUSTOMER_NAMES = ['Ava', 'Noah', 'Olivia', 'Luca', 'Mia', 'Leo', 'Isla', 'Jack']
 const rand = (min: number, max: number) => Math.random() * (max - min) + min
 
-function randomItems() {
+function randomItems(): DropBuddyOrder['items'] {
   const count = Math.floor(rand(1, 5))
-  return [...MENU_ITEMS].sort(() => 0.5 - Math.random()).slice(0, count)
+  return [...MENU_ITEMS]
+    .sort(() => 0.5 - Math.random())
+    .slice(0, count)
+    .map((name) => ({ name, quantity: 1 }))
 }
 
-function haversineMiles(a: [number, number], b: [number, number]): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180
-  const dLat = toRad(b[0] - a[0])
-  const dLon = toRad(b[1] - a[1])
-  const lat1 = toRad(a[0])
-  const lat2 = toRad(b[0])
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
-  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
-  return EARTH_RADIUS_MILES * c
-}
-
-/** Higher speed multiplier = shorter delivery time (drivers move faster). */
-function deliveryDurationMs(order: Order, speedMultiplier: number): number {
-  const scale = Math.max(0.05, speedMultiplier)
-  const miles = haversineMiles(RESTAURANT_LOCATION, order.location)
-  return Math.max(MIN_DELIVERY_MS / scale, (miles * DELIVERY_MS_PER_MILE) / scale)
-}
-
-function reconcileDriversWithOrders(orders: Order[], drivers: Driver[]): boolean {
-  let changed = false
-  const enRouteByDriver = new Map<string, Order[]>()
-  for (const order of orders) {
-    if (order.status === 'en-route' && order.assignedDriverId) {
-      const list = enRouteByDriver.get(order.assignedDriverId) ?? []
-      list.push(order)
-      enRouteByDriver.set(order.assignedDriverId, list)
-    }
+function buildDrivers(count: number, shop: ShopConfig['location'], prev: Driver[]): Driver[] {
+  const next: Driver[] = []
+  for (let i = 1; i <= count; i += 1) {
+    const id = `d${i}`
+    const existing = prev.find((d) => d.id === id)
+    next.push(
+      existing ?? {
+        id,
+        name: `Driver ${i}`,
+        isAvailable: true,
+        currentLocation: shop,
+      },
+    )
   }
-  const driverIds = new Set(drivers.map((d) => d.id))
-  for (const order of orders) {
-    if (order.status === 'en-route' && order.assignedDriverId && !driverIds.has(order.assignedDriverId)) {
-      order.status = 'pending'
-      order.assignedDriverId = undefined
-      order.assignedAt = undefined
-      changed = true
-    }
-  }
-  for (const driver of drivers) {
-    const list = (enRouteByDriver.get(driver.id) ?? []).filter((o) => o.status === 'en-route')
-    if (list.length === 0) {
-      if (!driver.isAvailable || driver.activeOrderId !== undefined) {
-        driver.isAvailable = true
-        driver.activeOrderId = undefined
-        changed = true
-      }
-      continue
-    }
-    if (list.length > 1) {
-      list.sort((a, b) => a.orderedAt - b.orderedAt)
-      const [, ...dupes] = list
-      for (const o of dupes) {
-        o.status = 'pending'
-        o.assignedDriverId = undefined
-        o.assignedAt = undefined
-        changed = true
-      }
-    }
-    const active = orders.find((o) => o.status === 'en-route' && o.assignedDriverId === driver.id)
-    if (active) {
-      if (!driver.isAvailable || driver.activeOrderId !== active.id) {
-        driver.isAvailable = false
-        driver.activeOrderId = active.id
-        changed = true
-      }
-    }
-  }
-  return changed
-}
-
-function pointWithinRadiusMiles(center: [number, number], radiusMiles: number): [number, number] {
-  const radiusKm = radiusMiles * 1.60934
-  const distanceKm = Math.sqrt(Math.random()) * radiusKm
-  const bearing = rand(0, 2 * Math.PI)
-  const lat1 = (center[0] * Math.PI) / 180
-  const lon1 = (center[1] * Math.PI) / 180
-  const angularDistance = distanceKm / 6371
-  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(angularDistance) + Math.cos(lat1) * Math.sin(angularDistance) * Math.cos(bearing))
-  const lon2 = lon1 + Math.atan2(Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(lat1), Math.cos(angularDistance) - Math.sin(lat1) * Math.sin(lat2))
-  return [(lat2 * 180) / Math.PI, (lon2 * 180) / Math.PI]
+  return next
 }
 
 function App() {
-  const [driverCount, setDriverCount] = useState(2)
-  const [orderFrequencySeconds, setOrderFrequencySeconds] = useState(3.5)
-  const [radiusMiles, setRadiusMiles] = useState(20)
-  /** 1 = default; 2 = twice as fast, etc. */
-  const [driverSpeed, setDriverSpeed] = useState(1)
-  const [orders, setOrders] = useState<Order[]>([])
-  const [drivers, setDrivers] = useState<Driver[]>([
-    { id: 'd1', name: 'Driver 1', isAvailable: true, currentLocation: RESTAURANT_LOCATION },
-    { id: 'd2', name: 'Driver 2', isAvailable: true, currentLocation: RESTAURANT_LOCATION },
-  ])
-  const ordersRef = useRef<Order[]>([])
-  const driversRef = useRef<Driver[]>([])
-  const driverSpeedRef = useRef(driverSpeed)
+  const [tab, setTab] = useState<Tab>('operations')
+  const [config, setConfig] = useState<ShopConfig>(DEFAULT_SHOP_CONFIG)
+  const [catalog, setCatalog] = useState<PrepCatalog>(EMPTY_PREP_CATALOG)
+  const [orders, setOrders] = useState<DropBuddyOrder[]>([])
+  const [drivers, setDrivers] = useState<Driver[]>(() =>
+    buildDrivers(DEFAULT_SHOP_CONFIG.driverCount, DEFAULT_SHOP_CONFIG.location, []),
+  )
 
-  useEffect(() => {
-    driverSpeedRef.current = driverSpeed
-  }, [driverSpeed])
+  const ordersRef = useRef(orders)
+  const driversRef = useRef(drivers)
+  const configRef = useRef(config)
 
   useEffect(() => {
     ordersRef.current = orders
   }, [orders])
-
   useEffect(() => {
     driversRef.current = drivers
   }, [drivers])
+  useEffect(() => {
+    configRef.current = config
+  }, [config])
 
-  const applyDriverCount = (nextRaw: number) => {
-    const n = Math.max(1, Math.min(20, Math.floor(Number(nextRaw)) || 1))
-    setDriverCount(n)
-    setDrivers((prev) => {
-      const nextDrivers: Driver[] = []
-      for (let i = 1; i <= n; i += 1) {
-        const id = `d${i}`
-        const existing = prev.find((driver) => driver.id === id)
-        nextDrivers.push(
-          existing ?? {
-            id,
-            name: `Driver ${i}`,
-            isAvailable: true,
-            currentLocation: RESTAURANT_LOCATION,
-          },
-        )
-      }
-      return nextDrivers
-    })
+  const applyConfig = (next: ShopConfig) => {
+    setConfig(next)
+    setDrivers((prev) => buildDrivers(next.driverCount, next.location, prev))
     setOrders((prev) =>
       prev.map((order) => {
         if (!order.assignedDriverId) return order
         const driverNumber = Number(order.assignedDriverId.replace('d', ''))
-        if (Number.isNaN(driverNumber) || driverNumber <= n) return order
+        if (Number.isNaN(driverNumber) || driverNumber <= next.driverCount) return order
         if (order.status !== 'en-route') return order
         return {
           ...order,
           status: 'pending',
           assignedDriverId: undefined,
           assignedAt: undefined,
+          deliveryBatchId: undefined,
         }
       }),
     )
@@ -185,45 +100,31 @@ function App() {
 
   useEffect(() => {
     const intakeTimer = setInterval(() => {
+      const cfg = configRef.current
       const now = Date.now()
-      const newOrder: Order = {
+      const location = pointWithinRadiusMiles(cfg.location, Math.max(1, cfg.serviceRadiusMiles))
+      const newOrder: DropBuddyOrder = {
         id: `ORD-${Math.floor(now / 1000)}-${Math.floor(rand(100, 999))}`,
         customerName: CUSTOMER_NAMES[Math.floor(rand(0, CUSTOMER_NAMES.length))],
-        location: pointWithinRadiusMiles(RESTAURANT_LOCATION, Math.max(1, radiusMiles)),
+        deliveryAddressText: 'Simulated address',
+        location,
         items: randomItems(),
         orderedAt: now,
-        expectedFulfilmentAt: now + Math.floor(rand(20, 55)) * 60_000,
+        requestedBy: now + Math.floor(rand(20, 55)) * 60_000,
         status: 'pending',
       }
       setOrders((prev) => [newOrder, ...prev].slice(0, 80))
-    }, Math.max(0.5, orderFrequencySeconds) * 1000)
+    }, Math.max(0.5, config.orderFrequencySeconds) * 1000)
     return () => clearInterval(intakeTimer)
-  }, [orderFrequencySeconds, radiusMiles])
+  }, [config.orderFrequencySeconds])
 
   useEffect(() => {
     const assignmentTimer = setInterval(() => {
-      const nextOrders = ordersRef.current.map((order) => ({ ...order }))
-      const nextDrivers = driversRef.current.map((driver) => ({ ...driver }))
-      let hasChanges = reconcileDriversWithOrders(nextOrders, nextDrivers)
-
-      for (const order of nextOrders) {
-        if (order.status !== 'pending') continue
-        const availableDriver = nextDrivers.find(
-          (driver) =>
-            driver.isAvailable &&
-            !nextOrders.some((o) => o.status === 'en-route' && o.assignedDriverId === driver.id),
-        )
-        if (!availableDriver) break
-        order.status = 'en-route'
-        order.assignedDriverId = availableDriver.id
-        order.assignedAt = Date.now()
-        availableDriver.isAvailable = false
-        availableDriver.activeOrderId = order.id
-        availableDriver.currentLocation = RESTAURANT_LOCATION
-        hasChanges = true
-      }
-
-      if (hasChanges) {
+      const { orders: nextOrders, drivers: nextDrivers, changed } = assignFirstAvailable(
+        ordersRef.current,
+        driversRef.current,
+      )
+      if (changed) {
         setOrders(nextOrders)
         setDrivers(nextDrivers)
       }
@@ -234,39 +135,38 @@ function App() {
   useEffect(() => {
     const completionTimer = setInterval(() => {
       const now = Date.now()
-      const nextOrders = ordersRef.current.map((order) => ({ ...order }))
-      const nextDrivers = driversRef.current.map((driver) => ({ ...driver }))
-      let hasChanges = reconcileDriversWithOrders(nextOrders, nextDrivers)
+      const cfg = configRef.current
+      const nextOrders = ordersRef.current.map((o) => ({ ...o }))
+      const nextDrivers = driversRef.current.map((d) => ({ ...d }))
+      let hasChanges = false
 
-      const busyWithOrder = nextDrivers.filter((d) => !d.isAvailable && d.activeOrderId)
-      if (busyWithOrder.length === 0) {
-        if (hasChanges) {
-          setOrders(nextOrders)
-          setDrivers(nextDrivers)
-        }
-        return
-      }
-
-      for (const driver of busyWithOrder) {
-        const orderId = driver.activeOrderId
-        if (!orderId) continue
-        const targetOrder = nextOrders.find((o) => o.id === orderId && o.status === 'en-route')
-        if (!targetOrder || targetOrder.assignedDriverId !== driver.id) continue
-        if (targetOrder.assignedAt === undefined) {
-          targetOrder.assignedAt = now
+      for (const driver of nextDrivers.filter((d) => !d.isAvailable && d.activeDeliveryId)) {
+        const target = nextOrders.find(
+          (o) =>
+            o.status === 'en-route' &&
+            o.assignedDriverId === driver.id &&
+            (o.deliveryBatchId === driver.activeDeliveryId || o.id === driver.activeDeliveryId),
+        )
+        if (!target || !target.location) continue
+        if (target.assignedAt === undefined) {
+          target.assignedAt = now
           hasChanges = true
           continue
         }
-        if (now - targetOrder.assignedAt < deliveryDurationMs(targetOrder, driverSpeedRef.current)) continue
-        targetOrder.status = 'delivered'
-        targetOrder.deliveredAt = now
-        targetOrder.assignedAt = undefined
-        const d = nextDrivers.find((x) => x.id === driver.id)
-        if (d) {
-          d.isAvailable = true
-          d.activeOrderId = undefined
-          d.currentLocation = RESTAURANT_LOCATION
-        }
+        const need = deliveryDurationMs(
+          cfg.location,
+          target.location,
+          cfg.driverSpeed,
+          DELIVERY_MS_PER_MILE,
+          MIN_DELIVERY_MS,
+        )
+        if (now - target.assignedAt < need) continue
+        target.status = 'delivered'
+        target.deliveredAt = now
+        target.assignedAt = undefined
+        driver.isAvailable = true
+        driver.activeDeliveryId = undefined
+        driver.currentLocation = cfg.location
         hasChanges = true
       }
 
@@ -278,115 +178,128 @@ function App() {
     return () => clearInterval(completionTimer)
   }, [])
 
-  const activeOrders = useMemo(() => orders.filter((order) => order.status !== 'delivered'), [orders])
-  const deliveredOrders = useMemo(() => orders.filter((order) => order.status === 'delivered').slice(0, 15), [orders])
+  const activeOrders = useMemo(() => orders.filter((o) => o.status !== 'delivered'), [orders])
+  const deliveredOrders = useMemo(
+    () => orders.filter((o) => o.status === 'delivered').slice(0, 15),
+    [orders],
+  )
   const activeDeliveries = useMemo(
     () =>
       orders
-        .filter((order) => order.status === 'en-route' && order.assignedDriverId)
-        .map((order) => ({
-          id: order.id,
-          driverId: order.assignedDriverId as string,
-          points: [RESTAURANT_LOCATION, order.location] as LatLngExpression[],
+        .filter((o) => o.status === 'en-route' && o.assignedDriverId && o.location)
+        .map((o) => ({
+          id: o.id,
+          driverId: o.assignedDriverId as string,
+          points: [config.location, o.location!] as LatLngExpression[],
         })),
-    [orders],
+    [orders, config.location],
   )
 
   return (
     <main className="layout">
       <header>
-        <h1>Restaurant Dispatch Simulator</h1>
-        <div className="controls">
-          <label className="driver-config">
-            Drivers:
-            <input
-              type="number"
-              min={1}
-              max={20}
-              value={driverCount}
-              onChange={(event) => applyDriverCount(Number(event.target.value))}
-            />
-          </label>
-          <label className="driver-config">
-            Order Every (sec):
-            <input
-              type="number"
-              min={0.5}
-              max={30}
-              step={0.5}
-              value={orderFrequencySeconds}
-              onChange={(event) => setOrderFrequencySeconds(Number(event.target.value) || 0.5)}
-            />
-          </label>
-          <label className="driver-config">
-            Radius (miles):
-            <input
-              type="number"
-              min={1}
-              max={100}
-              step={1}
-              value={radiusMiles}
-              onChange={(event) => setRadiusMiles(Number(event.target.value) || 1)}
-            />
-          </label>
-          <label className="driver-config">
-            Driver speed (×):
-            <input
-              type="number"
-              min={0.25}
-              max={8}
-              step={0.25}
-              value={driverSpeed}
-              onChange={(event) => setDriverSpeed(Math.max(0.25, Number(event.target.value) || 1))}
-            />
-          </label>
-        </div>
+        <h1>DropBuddy</h1>
+        <p className="muted">{config.shopName} — {config.addressLabel}</p>
+        <nav className="tabs">
+          <button type="button" className={tab === 'operations' ? 'active' : ''} onClick={() => setTab('operations')}>
+            Operations
+          </button>
+          <button type="button" className={tab === 'admin' ? 'active' : ''} onClick={() => setTab('admin')}>
+            Admin
+          </button>
+          <button type="button" className={tab === 'intake' ? 'active' : ''} onClick={() => setTab('intake')}>
+            Intake
+          </button>
+        </nav>
       </header>
-      <section className="map-panel">
-        <MapContainer center={RESTAURANT_LOCATION} zoom={11} scrollWheelZoom className="map">
-          <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <Circle center={RESTAURANT_LOCATION} radius={Math.max(1, radiusMiles) * MILES_TO_METERS} pathOptions={{ color: '#2563eb', fillColor: '#60a5fa', fillOpacity: 0.08 }} />
-          <Marker position={RESTAURANT_LOCATION}><Popup>Restaurant (Great Western Rd)</Popup></Marker>
-          {activeOrders.map((order) => (
-            <Marker key={order.id} position={order.location}>
-              <Popup><strong>{order.id}</strong><p>{order.customerName}</p><p>Status: {order.status}</p></Popup>
-            </Marker>
-          ))}
-          {activeDeliveries.map((delivery) => (
-            <Polyline key={delivery.id} positions={delivery.points} color="#f97316" weight={3}>
-              <Tooltip permanent direction="center" className="delivery-line-label">
-                {delivery.driverId}
-              </Tooltip>
-            </Polyline>
-          ))}
-        </MapContainer>
-      </section>
-      <section className="status-grid">
-        <div className="card">
-          <h2>Drivers</h2>
-          {drivers.map((driver) => <p key={driver.id}>{driver.name}: {driver.isAvailable ? 'Available' : `On ${driver.activeOrderId}`}</p>)}
-        </div>
-        <div className="card">
-          <h2>Open Orders</h2>
-          <ul>
-            {activeOrders.slice(0, 12).map((order) => (
-              <li key={order.id}>
-                <strong>{order.id}</strong> - {order.items.join(', ')} - ETA {new Date(order.expectedFulfilmentAt).toLocaleTimeString()} - {order.status}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="card">
-          <h2>Delivered (History)</h2>
-          <ul>
-            {deliveredOrders.map((order) => (
-              <li key={order.id}>
-                <strong>{order.id}</strong> - delivered at {order.deliveredAt ? new Date(order.deliveredAt).toLocaleTimeString() : '-'}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+
+      {tab === 'admin' && (
+        <AdminPanel config={config} onConfigChange={applyConfig} catalog={catalog} onCatalogChange={setCatalog} />
+      )}
+
+      {tab === 'intake' && (
+        <IntakePanel
+          onOrdersIngested={(incoming) => setOrders((prev) => [...incoming, ...prev].slice(0, 80))}
+        />
+      )}
+
+      {tab === 'operations' && (
+        <>
+          <section className="map-panel">
+            <MapContainer
+              key={`${config.location[0]},${config.location[1]}`}
+              center={config.location}
+              zoom={11}
+              scrollWheelZoom
+              className="map"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              <Circle
+                center={config.location}
+                radius={Math.max(1, config.serviceRadiusMiles) * MILES_TO_METERS}
+                pathOptions={{ color: '#2563eb', fillColor: '#60a5fa', fillOpacity: 0.08 }}
+              />
+              <Marker position={config.location}>
+                <Popup>{config.shopName}</Popup>
+              </Marker>
+              {activeOrders
+                .filter((o) => o.location)
+                .map((order) => (
+                  <Marker key={order.id} position={order.location!}>
+                    <Popup>
+                      <strong>{order.id}</strong>
+                      <p>{order.customerName}</p>
+                      <p>Status: {order.status}</p>
+                    </Popup>
+                  </Marker>
+                ))}
+              {activeDeliveries.map((delivery) => (
+                <Polyline key={delivery.id} positions={delivery.points} color="#f97316" weight={3}>
+                  <Tooltip permanent direction="center" className="delivery-line-label">
+                    {delivery.driverId}
+                  </Tooltip>
+                </Polyline>
+              ))}
+            </MapContainer>
+          </section>
+          <section className="status-grid">
+            <div className="card">
+              <h2>Drivers</h2>
+              {drivers.map((driver) => (
+                <p key={driver.id}>
+                  {driver.name}: {driver.isAvailable ? 'Available' : `On ${driver.activeDeliveryId}`}
+                </p>
+              ))}
+            </div>
+            <div className="card">
+              <h2>Open Orders</h2>
+              <ul>
+                {activeOrders.slice(0, 12).map((order) => (
+                  <li key={order.id}>
+                    <strong>{order.id}</strong> — {order.items.map((i) => i.name).join(', ')} —{' '}
+                    {order.requestedBy ? `ETA ${new Date(order.requestedBy).toLocaleTimeString()}` : 'no ETA'} —{' '}
+                    {order.status}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="card">
+              <h2>Delivered (History)</h2>
+              <ul>
+                {deliveredOrders.map((order) => (
+                  <li key={order.id}>
+                    <strong>{order.id}</strong> — delivered at{' '}
+                    {order.deliveredAt ? new Date(order.deliveredAt).toLocaleTimeString() : '-'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        </>
+      )}
     </main>
   )
 }

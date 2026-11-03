@@ -9,25 +9,30 @@ h1 {
   margin: 0;
 }
 
-.controls {
+.muted {
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  margin-top: 8px;
-}
-
-.driver-config {
-  display: inline-flex;
-  align-items: center;
   gap: 8px;
-  font-weight: 600;
+  margin-top: 12px;
 }
 
-.driver-config input {
-  width: 72px;
-  padding: 4px 6px;
+.tabs button {
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.tabs button.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
 }
 
 .map-panel {
@@ -41,7 +46,6 @@ h1 {
   width: 100%;
 }
 
-/* Tooltip on delivery polylines — readable label on the line */
 .leaflet-tooltip.delivery-line-label {
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid #f97316;
@@ -59,26 +63,77 @@ h1 {
   gap: 12px;
 }
 
-.card {
+.card,
+.admin-panel,
+.intake-panel {
   border: 1px solid #d1d5db;
   border-radius: 10px;
   padding: 12px;
   text-align: left;
+}
+
+.card {
   min-height: 220px;
 }
 
-.card h2 {
+.card h2,
+.admin-panel h2,
+.intake-panel h2 {
   margin: 0 0 8px;
   font-size: 18px;
 }
 
-.card ul {
+.card ul,
+.prep-list {
   margin: 0;
   padding-left: 18px;
 }
 
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0 20px;
+}
+
+.admin-grid label,
+.inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.inline-form {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+
+.admin-grid input,
+.inline-form input {
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.inline-form button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.prep-list li {
+  margin-bottom: 8px;
+}
+
 @media (max-width: 1024px) {
-  .status-grid {
+  .status-grid,
+  .admin-grid {
     grid-template-columns: 1fr;
   }
 }
