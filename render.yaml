@@ -6,7 +6,7 @@
 
 services:
   - type: web
-    name: dispatch-app
+    name: dropbuddy
     runtime: static
     buildCommand: npm ci && npm run build
     staticPublishPath: dist

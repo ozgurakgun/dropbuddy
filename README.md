@@ -1,16 +1,15 @@
-# Dispatch App (v1)
+# DropBuddy
 
-Restaurant dispatch simulation app for Great Western Rd, Glasgow.
+Restaurant dispatch app (Glasgow / Great Western Rd defaults). MVP1 simulated live map; MVP2 groundwork adds admin config, intake stubs, and dispatch hooks.
 
-## Features
+See [`docs/mvp2.md`](docs/mvp2.md) for the second MVP plan and [`workflow.md`](workflow.md) for PR/commit expectations.
 
-- OpenStreetMap map view centered on the restaurant.
-- Incoming orders generated from within a configurable mile radius.
-- Simple assignment algorithm: first available driver gets the next pending order.
-- Live status of drivers, open orders, and delivered history.
-- Render-oriented GitHub workflow (`.github/workflows/render_workflow.yml`) for:
-  - PR validation (`lint` + `build`)
-  - Optional deployment trigger on `main` with `RENDER_DEPLOY_HOOK_URL` secret
+## Features (current)
+
+- **Operations** — OpenStreetMap view, simulated orders, first-available driver assignment, distance-based delivery timing.
+- **Admin** — shop location, driver count, service radius, sim knobs, incomplete prep catalog + Q&A.
+- **Intake** — stub scanner → OCR → LLM pipeline (sample receipts / real scanner next).
+- Render static deploy via `render.yaml` + optional `RENDER_DEPLOY_HOOK_URL` GitHub secret.
 
 ## Local Development
 
@@ -32,10 +31,6 @@ npm run build
 
 Static Vite app: publish the `dist` folder after `npm run build`.
 
-1. In [Render](https://dashboard.render.com), create a **Static Site** and connect this GitHub repository (or use **Blueprints** and point at `render.yaml` in the repo).
-2. Use **Build command:** `npm ci && npm run build` and **Publish directory:** `dist`.
-3. Optional: open the service **Settings → Build & Deploy → Deploy Hook**, create a hook, then add it to GitHub as repository secret **`RENDER_DEPLOY_HOOK_URL`** so pushes to `main` can trigger a deploy via `.github/workflows/render_workflow.yml`.
-
-## Contributor / agent workflow
-
-See [`workflow.md`](workflow.md) for PR comments (prompt audit trail), commit style, and CI expectations.
+1. In [Render](https://dashboard.render.com), create a **Static Site** and connect this GitHub repository (or use **Blueprints** and point at `render.yaml`).
+2. **Build command:** `npm ci && npm run build` — **Publish directory:** `dist`.
+3. Optional: Deploy Hook → GitHub Actions secret **`RENDER_DEPLOY_HOOK_URL`**.
