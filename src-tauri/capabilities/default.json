@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "DropBuddy desktop capabilities",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "allow-ensure-inbox",
+    "allow-list-inbox-files",
+    "allow-read-inbox-file"
+  ]
+}

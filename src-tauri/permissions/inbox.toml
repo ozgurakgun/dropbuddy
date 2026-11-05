@@ -1,0 +1,14 @@
+[[permission]]
+identifier = "allow-ensure-inbox"
+description = "Ensure DropBuddy inbox directory exists"
+commands.allow = ["ensure_inbox"]
+
+[[permission]]
+identifier = "allow-list-inbox-files"
+description = "List scanned files in the DropBuddy inbox"
+commands.allow = ["list_inbox_files"]
+
+[[permission]]
+identifier = "allow-read-inbox-file"
+description = "Read a scanned file from the DropBuddy inbox as a data URL"
+commands.allow = ["read_inbox_file"]
