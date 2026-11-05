@@ -1,3 +1,5 @@
+mod ocr;
+
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
@@ -114,6 +116,19 @@ fn read_inbox_file(path: String) -> Result<String, String> {
   Ok(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OcrPayload {
+  text: String,
+  confidence: f32,
+}
+
+#[tauri::command]
+fn ocr_inbox_file(path: String) -> Result<OcrPayload, String> {
+  let (text, confidence) = ocr::ocr_inbox_file(&path)?;
+  Ok(OcrPayload { text, confidence })
+}
+
 #[tauri::command]
 fn open_inbox_folder() -> Result<String, String> {
   let dir = ensure_inbox_dir()?;
@@ -200,6 +215,7 @@ pub fn run() {
       ensure_inbox,
       list_inbox_files,
       read_inbox_file,
+      ocr_inbox_file,
       open_inbox_folder,
       open_scanner_app
     ])

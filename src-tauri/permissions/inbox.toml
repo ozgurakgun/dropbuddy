@@ -14,6 +14,11 @@ description = "Read a scanned file from the DropBuddy inbox as a data URL"
 commands.allow = ["read_inbox_file"]
 
 [[permission]]
+identifier = "allow-ocr-inbox-file"
+description = "Run local tesseract OCR on an inbox scan"
+commands.allow = ["ocr_inbox_file"]
+
+[[permission]]
 identifier = "allow-open-inbox-folder"
 description = "Reveal the DropBuddy inbox in Finder"
 commands.allow = ["open_inbox_folder"]

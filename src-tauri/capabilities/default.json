@@ -9,6 +9,7 @@
     "allow-ensure-inbox",
     "allow-list-inbox-files",
     "allow-read-inbox-file",
+    "allow-ocr-inbox-file",
     "allow-open-inbox-folder",
     "allow-open-scanner-app"
   ]
