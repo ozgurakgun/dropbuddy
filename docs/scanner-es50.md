@@ -1,6 +1,8 @@
 # Epson ES-50 → DropBuddy intake
 
-The browser cannot talk to USB scanners directly. Use **Epson Scan 2** (installer DMG from Epson) to save slips into a DropBuddy inbox folder, then import them in the **Intake** tab (or, later, a local watcher / server).
+USB scanners are not driven from a normal browser page. For MVP we accept a **standalone macOS app** (see `docs/macos-app.md`) that watches an inbox folder.
+
+Until that app lands: use **Epson Scan 2** to save slips into the DropBuddy inbox, then import them in the **Intake** tab (file picker / drag-and-drop).
 
 ## Recommended inbox
 
@@ -34,5 +36,6 @@ Suggested scan mode for kitchen slips: colour or greyscale, ~200–300 dpi, sing
 
 ## Later
 
-- Local folder watcher that auto-enqueues new files without a file picker.
+- **macOS app** folder watcher that auto-enqueues new files (no file picker).
 - Upload to object storage + server-side OCR when we add a Render web service.
+- Optional: scan trigger from the app via Image Capture / ICA (still may use Epson Scan 2 under the hood).

@@ -1,6 +1,6 @@
 # DropBuddy
 
-Restaurant dispatch app (Glasgow / Great Western Rd defaults). MVP1 simulated live map; MVP2 groundwork adds admin config, intake stubs, and dispatch hooks.
+Restaurant dispatch app (Glasgow / Great Western Rd defaults). MVP1 simulated live map; MVP2 groundwork adds admin config, intake stubs, and dispatch hooks. Kitchen MVP may ship as a **macOS app** for Epson ES-50 proximity (`docs/macos-app.md`).
 
 See [`docs/mvp2.md`](docs/mvp2.md) for the second MVP plan and [`workflow.md`](workflow.md) for PR/commit expectations.
 

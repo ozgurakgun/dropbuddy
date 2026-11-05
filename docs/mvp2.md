@@ -34,14 +34,20 @@ Normalized shape expected by dispatch (v0):
 - `requestedBy?` — customer promise time if on slip
 - `rawSource` — pointer to scan image + OCR text for audit
 
+## Delivery shape (softened for MVP)
+
+- **Kitchen MVP may be a standalone macOS app** (preferred for scanner proximity), not browser-only. See `docs/macos-app.md`.
+- **Render static/web** remains useful for demos and eventually multi-site admin; domain logic stays shared TypeScript.
+- Epson Scan 2 → `~/DropBuddy/inbox` stays the default capture path; the macOS app watches that folder.
+
 ## Phases
 
 1. **Groundwork (this PR)** — types, admin UI shell, intake/dispatch interfaces + mocks, keep map sim wired to config.
-2. **Scanner path** — Epson ES-50 via Epson Scan 2 → `~/DropBuddy/inbox`, then Intake file import (see `docs/scanner-es50.md`); later auto-watch + object storage.
+2. **Scanner path** — Epson ES-50 via Epson Scan 2 → `~/DropBuddy/inbox`; web file import now; macOS app folder watcher next (`docs/scanner-es50.md`, `docs/macos-app.md`).
 3. **OCR + LLM** — extract structured orders; admin review queue for low confidence.
 4. **Dispatch v1** — batching + kitchen start heuristics using prep catalog + driver availability.
 5. **Driver apps** — replace sim with live status.
 
 ## Render note
 
-MVP1 is a static site. Intake/OCR will need a **web service** (or separate worker) on Render later; groundwork keeps domain logic in TypeScript so it can move server-side without rewriting models.
+MVP1 is a static site. Production intake/OCR may still use a **web service** on Render; the macOS app can call that API. Shared domain modules should not assume browser-only APIs.
