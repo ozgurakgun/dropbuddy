@@ -1,7 +1,15 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DropBuddyOrder } from '../domain/types'
 import { MockDocumentScanner, StubOcrEngine, StubOrderExtractor } from './mock'
 import { runIntakePipeline, type IntakeResult, type ScanCapture } from './pipeline'
+import {
+  ensureInboxPath,
+  inboxFileToScanCapture,
+  isTauriRuntime,
+  listInboxFiles,
+  listenInboxFiles,
+  type InboxFileInfo,
+} from './tauriInbox'
 
 type Props = {
   onOrdersIngested: (orders: DropBuddyOrder[]) => void
@@ -10,69 +18,97 @@ type Props = {
 type QueuedScan = ScanCapture & { previewUrl?: string; fileName: string }
 
 /**
- * Epson ES-50 (and similar) save into ~/DropBuddy/inbox via Epson Scan 2.
- * This panel imports those files into the stub OCR+LLM pipeline.
+ * Epson ES-50 → Epson Scan 2 → ~/DropBuddy/inbox.
+ * In the macOS (Tauri) app, new files are auto-queued. In the browser, use file picker / drop.
  */
 export function IntakePanel({ onOrdersIngested }: Props) {
   const scanner = useMemo(() => new MockDocumentScanner(), [])
   const ocr = useMemo(() => new StubOcrEngine(), [])
   const extractor = useMemo(() => new StubOrderExtractor(), [])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const seenPaths = useRef(new Set<string>())
+  const desktop = useMemo(() => isTauriRuntime(), [])
+  const [inboxPath, setInboxPath] = useState<string | null>(null)
   const [queue, setQueue] = useState<QueuedScan[]>([])
   const [log, setLog] = useState<IntakeResult[]>([])
   const [busy, setBusy] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const [status, setStatus] = useState('')
 
-  const refreshQueue = async () => {
-    const pending = await scanner.listPending()
-    setQueue((prev) => {
-      const byId = new Map(prev.map((q) => [q.id, q]))
-      return pending.map((p) => {
-        const existing = byId.get(p.id)
-        return {
-          ...p,
-          fileName: existing?.fileName ?? p.imageRef.split('/').pop() ?? p.id,
-          previewUrl: existing?.previewUrl,
-        }
-      })
-    })
+  const enqueueCapture = (capture: QueuedScan) => {
+    const key = capture.imageRef
+    if (seenPaths.current.has(key)) return
+    seenPaths.current.add(key)
+    scanner.enqueue(capture)
+    setQueue((prev) => [...prev, capture])
   }
+
+  useEffect(() => {
+    if (!desktop) return
+
+    let cancelled = false
+    let unlisten: (() => void) | undefined
+
+    const importInboxFile = async (file: InboxFileInfo) => {
+      try {
+        const capture = await inboxFileToScanCapture(file)
+        if (cancelled) return
+        enqueueCapture(capture)
+      } catch (err) {
+        if (!cancelled) setStatus(err instanceof Error ? err.message : String(err))
+      }
+    }
+
+    void (async () => {
+      try {
+        const path = await ensureInboxPath()
+        if (cancelled) return
+        setInboxPath(path)
+        setStatus(path ? `Watching ${path}` : 'Inbox unavailable')
+        const existing = await listInboxFiles()
+        for (const file of existing) {
+          await importInboxFile(file)
+        }
+        unlisten = await listenInboxFiles((file) => {
+          void importInboxFile(file)
+        })
+      } catch (err) {
+        if (!cancelled) setStatus(err instanceof Error ? err.message : String(err))
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      unlisten?.()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only desktop inbox bootstrap
+  }, [desktop])
 
   const enqueueFiles = async (files: FileList | File[]) => {
     const list = Array.from(files).filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf')
     for (const file of list) {
       const id = `scan-${Date.now()}-${Math.floor(Math.random() * 1000)}`
       const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-      const capture: ScanCapture = {
+      enqueueCapture({
         id,
         capturedAt: Date.now(),
         imageRef: file.name,
         mimeType: file.type || 'application/octet-stream',
-      }
-      scanner.enqueue(capture)
-      setQueue((prev) => [...prev, { ...capture, fileName: file.name, previewUrl }])
+        fileName: file.name,
+        previewUrl,
+      })
     }
-    await refreshQueue()
   }
 
   const enqueueSynthetic = () => {
     const id = `scan-${Date.now()}`
-    scanner.enqueue({
+    enqueueCapture({
       id,
       capturedAt: Date.now(),
       imageRef: `sample-receipts/${id}.jpg`,
       mimeType: 'image/jpeg',
+      fileName: `${id}.jpg`,
     })
-    setQueue((prev) => [
-      ...prev,
-      {
-        id,
-        capturedAt: Date.now(),
-        imageRef: `sample-receipts/${id}.jpg`,
-        mimeType: 'image/jpeg',
-        fileName: `${id}.jpg`,
-      },
-    ])
   }
 
   const processQueue = async () => {
@@ -87,14 +123,35 @@ export function IntakePanel({ onOrdersIngested }: Props) {
     }
   }
 
+  const refreshInbox = async () => {
+    const files = await listInboxFiles()
+    for (const file of files) {
+      try {
+        const capture = await inboxFileToScanCapture(file)
+        enqueueCapture(capture)
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : String(err))
+      }
+    }
+  }
+
   return (
     <section className="intake-panel">
       <h2>Intake — Epson ES-50 slips</h2>
       <p className="muted">
-        Scan with <strong>Epson Scan 2</strong> into <code>~/DropBuddy/inbox</code>, then add those files here.
-        OCR+LLM is still stubbed; images are queued for the real pipeline next. See{' '}
-        <code>docs/scanner-es50.md</code>.
+        {desktop ? (
+          <>
+            Desktop app is watching <code>{inboxPath ?? '~/DropBuddy/inbox'}</code>. Scan with{' '}
+            <strong>Epson Scan 2</strong> into that folder and slips will appear below.
+          </>
+        ) : (
+          <>
+            Browser mode: scan into <code>~/DropBuddy/inbox</code>, then add files here. For auto-import, run the
+            macOS app (<code>npm run desktop:dev</code>). See <code>docs/scanner-es50.md</code>.
+          </>
+        )}
       </p>
+      {status && <p className="muted">{status}</p>}
 
       <div
         className={`dropzone${dragOver ? ' drag-over' : ''}`}
@@ -114,6 +171,11 @@ export function IntakePanel({ onOrdersIngested }: Props) {
           <button type="button" onClick={() => fileInputRef.current?.click()}>
             Add scanned files…
           </button>
+          {desktop && (
+            <button type="button" onClick={() => void refreshInbox()}>
+              Refresh inbox
+            </button>
+          )}
           <button type="button" onClick={enqueueSynthetic}>
             Enqueue synthetic slip
           </button>
