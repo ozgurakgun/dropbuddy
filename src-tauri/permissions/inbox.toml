@@ -12,3 +12,13 @@ commands.allow = ["list_inbox_files"]
 identifier = "allow-read-inbox-file"
 description = "Read a scanned file from the DropBuddy inbox as a data URL"
 commands.allow = ["read_inbox_file"]
+
+[[permission]]
+identifier = "allow-open-inbox-folder"
+description = "Reveal the DropBuddy inbox in Finder"
+commands.allow = ["open_inbox_folder"]
+
+[[permission]]
+identifier = "allow-open-scanner-app"
+description = "Open Image Capture to run the Epson ES-50"
+commands.allow = ["open_scanner_app"]

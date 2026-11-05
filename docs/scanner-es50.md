@@ -1,53 +1,45 @@
 # Epson ES-50 → DropBuddy intake
 
-USB scanners are not driven from a normal browser page. For MVP we accept a **standalone macOS app** (see `docs/macos-app.md`) that watches an inbox folder.
+USB scanning is **not** started inside DropBuddy. On this Mac the installer provides:
 
-Until that app lands: use **Epson Scan 2** to save slips into the DropBuddy inbox, then import them in the **Intake** tab (file picker / drag-and-drop).
+- **Image Capture** device driver: `/Library/Image Capture/Devices/EPSON ES017E.app`
+- **Epson Scan 2 Utility** (maintenance) under `/Applications/Epson Software/`
+- There is typically **no** standalone “Epson Scan 2.app” — you scan from **Image Capture**
+
+DropBuddy (desktop) only **watches** `~/DropBuddy/inbox` and imports new images.
+
+## Confirm the scanner is connected
+
+```bash
+ioreg -p IOUSB -w0 | rg 'Epson ES-50'
+```
+
+It should appear (often behind a USB-C hub).
 
 ## Recommended inbox
 
-```text
-~/DropBuddy/inbox
-```
-
-Create it once:
-
 ```bash
-mkdir -p ~/DropBuddy/inbox
-open ~/DropBuddy/inbox
+npm run inbox:init
+# -> ~/DropBuddy/inbox
 ```
 
-## Epson Scan 2 settings (ES-50)
+## How to scan (MVP)
 
-1. Install **Epson Scan 2** from the Epson software package for ES-50.
-2. Confirm the scanner appears in Epson Scan 2 / macOS **Image Capture**.
-3. Set destination folder to `~/DropBuddy/inbox`.
-4. Prefer **JPEG** or **PNG** for receipts (PDF works later once OCR handles multi-page).
-5. Use a naming pattern that includes a timestamp if available (easier to audit).
+1. Run DropBuddy desktop: `npm run desktop:dev`
+2. Open **Intake** → **Open Image Capture (scan)** (or Spotlight → Image Capture)
+3. Select **Epson ES-50** in the left sidebar
+4. Set the destination / “Where” folder to `~/DropBuddy/inbox`
+5. Place the slip, click **Scan**
+6. The file should appear in DropBuddy Intake automatically
 
-Suggested scan mode for kitchen slips: colour or greyscale, ~200–300 dpi, single-sided.
+If Image Capture shows “No devices”: unplug/replug the ES-50 (or the Anker hub), wait a few seconds, quit and reopen Image Capture.
 
-## DropBuddy flow
+## Browser fallback
 
-### Desktop app (preferred)
-
-```bash
-npm run desktop:dev
-```
-
-1. Scan a slip with the ES-50 into `~/DropBuddy/inbox`.
-2. DropBuddy **Intake** auto-queues the new file (watcher).
-3. **Run OCR+LLM stub** — stubbed for now; real OCR/LLM next.
-
-### Browser fallback
-
-1. Scan into `~/DropBuddy/inbox`.
-2. Open DropBuddy → **Intake**.
-3. **Add scanned files…** / drag-and-drop.
-4. **Run OCR+LLM stub**.
+Without the desktop app: scan into `~/DropBuddy/inbox`, then use **Add scanned files…** / drag-and-drop in Intake.
 
 ## Later
 
-- **macOS app** folder watcher that auto-enqueues new files (no file picker).
-- Upload to object storage + server-side OCR when we add a Render web service.
-- Optional: scan trigger from the app via Image Capture / ICA (still may use Epson Scan 2 under the hood).
+- Auto-set Image Capture destination to the inbox
+- Optional scan trigger UX polish
+- Real OCR + LLM on queued images

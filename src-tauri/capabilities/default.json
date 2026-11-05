@@ -8,6 +8,8 @@
     "core:event:default",
     "allow-ensure-inbox",
     "allow-list-inbox-files",
-    "allow-read-inbox-file"
+    "allow-read-inbox-file",
+    "allow-open-inbox-folder",
+    "allow-open-scanner-app"
   ]
 }

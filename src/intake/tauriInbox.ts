@@ -51,3 +51,19 @@ export async function listenInboxFiles(
     un()
   }
 }
+
+export async function openScannerApp(): Promise<string> {
+  if (!isTauriRuntime()) {
+    throw new Error('Scanner launch is only available in the DropBuddy desktop app')
+  }
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke<string>('open_scanner_app')
+}
+
+export async function openInboxFolder(): Promise<string> {
+  if (!isTauriRuntime()) {
+    throw new Error('Open inbox is only available in the DropBuddy desktop app')
+  }
+  const { invoke } = await import('@tauri-apps/api/core')
+  return invoke<string>('open_inbox_folder')
+}

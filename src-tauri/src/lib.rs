@@ -3,6 +3,7 @@ use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -113,6 +114,34 @@ fn read_inbox_file(path: String) -> Result<String, String> {
   Ok(format!("data:{mime};base64,{}", STANDARD.encode(bytes)))
 }
 
+#[tauri::command]
+fn open_inbox_folder() -> Result<String, String> {
+  let dir = ensure_inbox_dir()?;
+  Command::new("open")
+    .arg(&dir)
+    .status()
+    .map_err(|e| format!("Failed to open inbox: {e}"))?;
+  Ok(dir.to_string_lossy().into_owned())
+}
+
+/// Opens macOS Image Capture so the user can run the ES-50.
+/// (DropBuddy watches the inbox; it does not drive the USB scanner itself.)
+#[tauri::command]
+fn open_scanner_app() -> Result<String, String> {
+  let _ = ensure_inbox_dir()?;
+  // Prefer Image Capture — Epson Scan 2 on this machine installs as an ICA device (ES017E),
+  // not a standalone "Epson Scan 2.app".
+  let status = Command::new("open")
+    .arg("-a")
+    .arg("Image Capture")
+    .status()
+    .map_err(|e| format!("Failed to open Image Capture: {e}"))?;
+  if !status.success() {
+    return Err("Image Capture did not launch successfully".into());
+  }
+  Ok("Opened Image Capture — select Epson ES-50, set destination to ~/DropBuddy/inbox, then Scan".into())
+}
+
 fn start_inbox_watcher(app: AppHandle, state: &InboxState) -> Result<(), String> {
   let dir = ensure_inbox_dir()?;
   let app_for_watch = app.clone();
@@ -170,7 +199,9 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       ensure_inbox,
       list_inbox_files,
-      read_inbox_file
+      read_inbox_file,
+      open_inbox_folder,
+      open_scanner_app
     ])
     .run(tauri::generate_context!())
     .expect("error while building tauri application");

@@ -8,6 +8,8 @@ import {
   isTauriRuntime,
   listInboxFiles,
   listenInboxFiles,
+  openInboxFolder,
+  openScannerApp,
   type InboxFileInfo,
 } from './tauriInbox'
 
@@ -141,8 +143,8 @@ export function IntakePanel({ onOrdersIngested }: Props) {
       <p className="muted">
         {desktop ? (
           <>
-            Desktop app is watching <code>{inboxPath ?? '~/DropBuddy/inbox'}</code>. Scan with{' '}
-            <strong>Epson Scan 2</strong> into that folder and slips will appear below.
+            DropBuddy watches <code>{inboxPath ?? '~/DropBuddy/inbox'}</code> — it does not drive the USB
+            scanner. Use <strong>Image Capture</strong> (Epson ES-50 ICA driver) to scan into that folder.
           </>
         ) : (
           <>
@@ -152,6 +154,34 @@ export function IntakePanel({ onOrdersIngested }: Props) {
         )}
       </p>
       {status && <p className="muted">{status}</p>}
+
+      {desktop && (
+        <div className="inline-form">
+          <button
+            type="button"
+            onClick={() => {
+              void openScannerApp()
+                .then((msg) => setStatus(msg))
+                .catch((err: unknown) => setStatus(err instanceof Error ? err.message : String(err)))
+            }}
+          >
+            Open Image Capture (scan)
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void openInboxFolder()
+                .then((path) => setStatus(`Inbox: ${path}`))
+                .catch((err: unknown) => setStatus(err instanceof Error ? err.message : String(err)))
+            }}
+          >
+            Open inbox folder
+          </button>
+          <button type="button" onClick={() => void refreshInbox()}>
+            Refresh inbox
+          </button>
+        </div>
+      )}
 
       <div
         className={`dropzone${dragOver ? ' drag-over' : ''}`}
@@ -171,11 +201,6 @@ export function IntakePanel({ onOrdersIngested }: Props) {
           <button type="button" onClick={() => fileInputRef.current?.click()}>
             Add scanned files…
           </button>
-          {desktop && (
-            <button type="button" onClick={() => void refreshInbox()}>
-              Refresh inbox
-            </button>
-          )}
           <button type="button" onClick={enqueueSynthetic}>
             Enqueue synthetic slip
           </button>
