@@ -38,8 +38,17 @@ If Image Capture shows “No devices”: unplug/replug the ES-50 (or the Anker h
 
 Without the desktop app: scan into `~/DropBuddy/inbox`, then use **Add scanned files…** / drag-and-drop in Intake.
 
+## OCR (desktop)
+
+Requires Homebrew tools (already present on this machine):
+
+```bash
+brew install tesseract poppler
+```
+
+In DropBuddy desktop → Intake → **Run OCR** on queued inbox files (PDF via `pdftoppm`, then `tesseract`).
+
 ## Later
 
 - Auto-set Image Capture destination to the inbox
-- Optional scan trigger UX polish
-- Real OCR + LLM on queued images
+- LLM structuring of OCR text (heuristic extractor is in place for now)

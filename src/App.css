@@ -176,6 +176,21 @@ h1 {
   font-weight: 600;
 }
 
+.ocr-text {
+  margin-top: 8px;
+}
+
+.ocr-text pre {
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow: auto;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
 @media (max-width: 1024px) {
   .status-grid,
   .admin-grid {

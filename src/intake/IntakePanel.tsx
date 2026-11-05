@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DropBuddyOrder } from '../domain/types'
-import { MockDocumentScanner, StubOcrEngine, StubOrderExtractor } from './mock'
+import { HeuristicOrderExtractor } from './extractOrder'
+import { MockDocumentScanner } from './mock'
+import { createOcrEngine } from './ocr'
 import { runIntakePipeline, type IntakeResult, type ScanCapture } from './pipeline'
 import {
   ensureInboxPath,
@@ -25,8 +27,8 @@ type QueuedScan = ScanCapture & { previewUrl?: string; fileName: string }
  */
 export function IntakePanel({ onOrdersIngested }: Props) {
   const scanner = useMemo(() => new MockDocumentScanner(), [])
-  const ocr = useMemo(() => new StubOcrEngine(), [])
-  const extractor = useMemo(() => new StubOrderExtractor(), [])
+  const ocr = useMemo(() => createOcrEngine(), [])
+  const extractor = useMemo(() => new HeuristicOrderExtractor(), [])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const seenPaths = useRef(new Set<string>())
   const desktop = useMemo(() => isTauriRuntime(), [])
@@ -205,7 +207,7 @@ export function IntakePanel({ onOrdersIngested }: Props) {
             Enqueue synthetic slip
           </button>
           <button type="button" onClick={processQueue} disabled={busy || queue.length === 0}>
-            {busy ? 'Processing…' : `Run OCR+LLM stub (${queue.length})`}
+            {busy ? 'Running OCR…' : `Run OCR (${queue.length})`}
           </button>
         </div>
         <input
@@ -247,9 +249,24 @@ export function IntakePanel({ onOrdersIngested }: Props) {
       <ul className="prep-list">
         {log.map((r) => (
           <li key={r.order.id}>
-            <strong>{r.order.id}</strong> — {r.order.items.map((i) => i.name).join(', ')}
+            <strong>{r.order.id}</strong>
+            {r.order.customerName ? ` — ${r.order.customerName}` : ''}
+            {r.order.deliveryAddressText ? ` — ${r.order.deliveryAddressText}` : ''}
+            <br />
+            Items: {r.order.items.map((i) => `${i.quantity}× ${i.name}`).join('; ') || '—'}
             {r.needsAdminReview ? ' (needs review)' : ''}
-            {r.warnings.length > 0 ? ` — ${r.warnings.join('; ')}` : ''}
+            {r.warnings.length > 0 ? (
+              <>
+                <br />
+                <span className="muted">{r.warnings.join('; ')}</span>
+              </>
+            ) : null}
+            {r.order.rawSource?.ocrText ? (
+              <details className="ocr-text">
+                <summary>OCR text</summary>
+                <pre>{r.order.rawSource.ocrText}</pre>
+              </details>
+            ) : null}
           </li>
         ))}
       </ul>

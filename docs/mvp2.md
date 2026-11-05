@@ -44,7 +44,7 @@ Normalized shape expected by dispatch (v0):
 
 1. **Groundwork (this PR)** — types, admin UI shell, intake/dispatch interfaces + mocks, keep map sim wired to config.
 2. **Scanner path** — Epson ES-50 via Epson Scan 2 → `~/DropBuddy/inbox`; web file import now; macOS app folder watcher next (`docs/scanner-es50.md`, `docs/macos-app.md`).
-3. **OCR + LLM** — extract structured orders; admin review queue for low confidence.
+3. **OCR + LLM** — local tesseract OCR on inbox scans (done in desktop app); heuristic structuring first, then LLM; admin review for low confidence.
 4. **Dispatch v1** — batching + kitchen start heuristics using prep catalog + driver availability.
 5. **Driver apps** — replace sim with live status.
 
