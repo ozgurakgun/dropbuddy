@@ -131,6 +131,51 @@ h1 {
   margin-bottom: 8px;
 }
 
+.dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 12px 0;
+  background: #f8fafc;
+}
+
+.dropzone.drag-over {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.scan-queue {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scan-queue li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.scan-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.scan-thumb.placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 @media (max-width: 1024px) {
   .status-grid,
   .admin-grid {
