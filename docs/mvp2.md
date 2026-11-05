@@ -37,7 +37,7 @@ Normalized shape expected by dispatch (v0):
 ## Phases
 
 1. **Groundwork (this PR)** — types, admin UI shell, intake/dispatch interfaces + mocks, keep map sim wired to config.
-2. **Scanner path** — upload/watch folder or USB scanner capture; store images locally / object storage.
+2. **Scanner path** — Epson ES-50 via Epson Scan 2 → `~/DropBuddy/inbox`, then Intake file import (see `docs/scanner-es50.md`); later auto-watch + object storage.
 3. **OCR + LLM** — extract structured orders; admin review queue for low confidence.
 4. **Dispatch v1** — batching + kitchen start heuristics using prep catalog + driver availability.
 5. **Driver apps** — replace sim with live status.

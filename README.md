@@ -8,7 +8,7 @@ See [`docs/mvp2.md`](docs/mvp2.md) for the second MVP plan and [`workflow.md`](w
 
 - **Operations** — OpenStreetMap view, simulated orders, first-available driver assignment, distance-based delivery timing.
 - **Admin** — shop location, driver count, service radius, sim knobs, incomplete prep catalog + Q&A.
-- **Intake** — stub scanner → OCR → LLM pipeline (sample receipts / real scanner next).
+- **Intake** — Epson ES-50 / file import → stub OCR → LLM pipeline (see `docs/scanner-es50.md`).
 - Render static deploy via `render.yaml` + optional `RENDER_DEPLOY_HOOK_URL` GitHub secret.
 
 ## Local Development
