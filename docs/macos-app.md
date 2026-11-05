@@ -8,25 +8,39 @@ We are **not** requiring a browser-only MVP. A standalone macOS app is fine for 
 - A desktop shell can watch `~/DropBuddy/inbox`, keep the window on a kitchen Mac, and later call local OCR or a cloud API.
 - The existing Vite + React UI can be reused inside a thin native wrapper.
 
-## Recommended approach (next implementation slice)
+## Implementation (in progress on MVP2 branch)
 
-**Tauri 2** wrapping this repo’s frontend:
+**Tauri 2** wraps this repo’s frontend (`src-tauri/`).
 
 | Layer | Role |
 |-------|------|
-| React UI (current) | Admin / Operations / Intake |
-| Tauri (Rust) | App window, FS permissions, folder watcher on `~/DropBuddy/inbox` |
-| Epson Scan 2 | Still owns USB scan → writes images to inbox |
-| Optional later | Native Image Capture / ICA if we want scan-from-app without Epson UI |
+| React UI | Admin / Operations / Intake |
+| Tauri | App window, inbox ensure/list/read commands, `notify` folder watcher |
+| Epson Scan 2 | USB scan → writes images to `~/DropBuddy/inbox` |
 
-Electron is also viable; Tauri keeps the install smaller and fits the current Vite toolchain.
+### Run locally
+
+```bash
+npm install
+npm run inbox:init
+# Set Epson Scan 2 destination to ~/DropBuddy/inbox
+npm run desktop:dev
+```
+
+Web-only (no auto-watch): `npm run dev`.
+
+### Build a macOS app
+
+```bash
+npm run desktop:build
+```
 
 ## MVP behaviour
 
 1. User scans with ES-50 → files land in `~/DropBuddy/inbox`.
-2. macOS app auto-detects new images and queues them in Intake (no manual file picker).
-3. Stub → then real OCR+LLM as today planned.
-4. Render-hosted web build can remain for remote demos; kitchen machine runs the desktop app.
+2. macOS app auto-detects new images and queues them in Intake.
+3. Stub → then real OCR+LLM.
+4. Render-hosted web build remains for remote demos.
 
 ## Out of scope for first desktop slice
 

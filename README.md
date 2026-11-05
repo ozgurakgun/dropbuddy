@@ -15,10 +15,19 @@ See [`docs/mvp2.md`](docs/mvp2.md) for the second MVP plan and [`workflow.md`](w
 
 ```bash
 npm install
+npm run inbox:init
 npm run dev
 ```
 
 Open `http://127.0.0.1:5173` (or the port shown by Vite).
+
+### Kitchen desktop app (Epson ES-50)
+
+```bash
+npm run desktop:dev
+```
+
+Uses Tauri: watches `~/DropBuddy/inbox` and opens the DropBuddy UI. Point **Epson Scan 2** at that inbox (`docs/scanner-es50.md`, `docs/macos-app.md`).
 
 ## Local Build Check
 

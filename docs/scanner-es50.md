@@ -27,12 +27,24 @@ open ~/DropBuddy/inbox
 
 Suggested scan mode for kitchen slips: colour or greyscale, ~200–300 dpi, single-sided.
 
-## DropBuddy flow (current groundwork)
+## DropBuddy flow
+
+### Desktop app (preferred)
+
+```bash
+npm run desktop:dev
+```
 
 1. Scan a slip with the ES-50 into `~/DropBuddy/inbox`.
+2. DropBuddy **Intake** auto-queues the new file (watcher).
+3. **Run OCR+LLM stub** — stubbed for now; real OCR/LLM next.
+
+### Browser fallback
+
+1. Scan into `~/DropBuddy/inbox`.
 2. Open DropBuddy → **Intake**.
-3. **Add scanned files…** (or drag-and-drop) and select the new image(s) from the inbox.
-4. **Run OCR+LLM stub** — currently stubbed; next phase wires real OCR/LLM against these images.
+3. **Add scanned files…** / drag-and-drop.
+4. **Run OCR+LLM stub**.
 
 ## Later
 
