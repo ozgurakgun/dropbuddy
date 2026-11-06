@@ -43,12 +43,14 @@ export async function sendInviteEmail({
   email,
   name,
   tenantName,
+  role,
   token,
   expiresInLabel,
 }: {
   email: string
   name?: string | null
   tenantName: string
+  role?: 'restaurant_admin' | 'driver'
   token: string
   expiresInLabel: string
 }) {
@@ -56,12 +58,15 @@ export async function sendInviteEmail({
   inviteUrl.searchParams.set('token', token)
   inviteUrl.searchParams.set('purpose', 'invite')
 
+  const roleLabel =
+    role === 'driver' ? 'as a driver' : role === 'restaurant_admin' ? 'as a restaurant admin' : ''
+
   return sendEmail({
     to: email,
     subject: `You're invited to DropBuddy (${tenantName})`,
     html: buildEmailHtml({
       title: `Welcome${name ? `, ${name}` : ''}`,
-      description: `You've been invited to manage <strong>${tenantName}</strong> on DropBuddy. Set a password to activate your account. This link expires ${expiresInLabel}.`,
+      description: `You've been invited ${roleLabel} for <strong>${tenantName}</strong> on DropBuddy. Set a password to activate your account. This link expires ${expiresInLabel}.`,
       ctaLabel: 'Set password',
       ctaUrl: inviteUrl.toString(),
       footer: 'If you were not expecting this invite, you can ignore this message.',

@@ -19,6 +19,7 @@ export default async function SuperadminTenantsPage() {
       title="Tenants"
       nav={[
         { href: '/superadmin/tenants', label: 'Tenants' },
+        { href: '/superadmin/users', label: 'Users' },
         { href: '/', label: 'Home' },
       ]}
     >

@@ -29,6 +29,7 @@ export default async function RestaurantOrdersPage() {
       nav={[
         { href: '/restaurant/orders', label: 'Orders' },
         { href: '/restaurant/map', label: 'Live map' },
+        { href: '/restaurant/team', label: 'Team' },
         { href: '/', label: 'Home' },
       ]}
     >

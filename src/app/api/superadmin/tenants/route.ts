@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       email: admin.email,
       name: admin.name,
       tenantName: tenant.name,
+      role: 'restaurant_admin',
       token: invite.token,
       expiresInLabel: 'in 7 days',
     })

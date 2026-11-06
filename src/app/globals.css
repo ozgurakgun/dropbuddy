@@ -152,10 +152,12 @@ input {
   gap: 6px;
 }
 
-.stack-form input {
+.stack-form input,
+.stack-form select {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
+  background: white;
 }
 
 .stack-form button {

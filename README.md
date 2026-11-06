@@ -64,9 +64,13 @@ Use the Blueprint in [`render.yaml`](render.yaml):
 
 Health check: `/api/system/status`.
 
-## Email
+## Email & accounts
 
-Outbound mail uses nodemailer over SMTP (same pattern as workforce / timetabling). Superadmins can create a restaurant tenant and invite a restaurant admin by email; users can also request a password reset from `/auth/forgot-password`.
+Outbound mail uses nodemailer over SMTP (same pattern as workforce / timetabling).
+
+- Superadmin: create a restaurant + invite its admin (`/superadmin/tenants`), or invite more users (`/superadmin/users`)
+- Restaurant admin: invite drivers or additional admins (`/restaurant/team`)
+- Invited users set a password from the email link; anyone can use `/auth/forgot-password`
 
 ## Contributor / agent workflow
 
