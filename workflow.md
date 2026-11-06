@@ -7,8 +7,8 @@
 
 ## CI
 
-- Run `npm run lint` and `npm run build` locally before pushing when you touch app or workflow code.
+- Run `npm run lint` and `npm run build-no-db` locally before pushing when you touch app or workflow code.
 
 ## Deploy (Render)
 
-- See `README.md` (Render section) and `render.yaml` for static site deployment and the GitHub deploy hook secret.
+- See `README.md` (Render section) and `render.yaml` for the **Node web service + Postgres** blueprint and the GitHub deploy hook secret.

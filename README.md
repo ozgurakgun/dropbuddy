@@ -1,41 +1,78 @@
-# Dispatch App (v1)
+# DropBuddy
 
-Restaurant dispatch simulation app for Great Western Rd, Glasgow.
+Multi-tenant restaurant delivery dispatch web app.
 
-## Features
+Restaurants capture order slips with **camera / file upload**, the app **auto-suggests a driver** (with override), and drivers punch pickup/delivery while sharing live location. Hosted as a **Next.js Node service on Render** with **managed Postgres** and **NextAuth**.
 
-- OpenStreetMap map view centered on the restaurant.
-- Incoming orders generated from within a configurable mile radius.
-- Simple assignment algorithm: first available driver gets the next pending order.
-- Live status of drivers, open orders, and delivered history.
-- Render-oriented GitHub workflow (`.github/workflows/render_workflow.yml`) for:
-  - PR validation (`lint` + `build`)
-  - Optional deployment trigger on `main` with `RENDER_DEPLOY_HOOK_URL` secret
+The earlier Vite / Tauri / Epson scanner MVP path is abandoned — see [`docs/web-app-design.md`](docs/web-app-design.md).
 
-## Local Development
+## Stack
+
+- Next.js 15 (App Router)
+- Prisma + PostgreSQL
+- NextAuth (credentials + JWT session with tenant/role claims)
+- Leaflet (map view; wiring follows this skeleton)
+
+## Roles
+
+| Role | Routes |
+|------|--------|
+| Superadmin | `/superadmin/tenants` |
+| Restaurant admin | `/restaurant/orders`, `/restaurant/map` |
+| Driver | `/driver` |
+
+## Local development
 
 ```bash
+cp .env.example .env
+# point DATABASE_URL at a local Postgres database
 npm install
+npx prisma migrate deploy
+npm run db:seed
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173` (or the port shown by Vite).
+Open [http://localhost:3000](http://localhost:3000).
 
-## Local Build Check
+Demo accounts (password `password123`):
+
+- `superadmin@dropbuddy.local`
+- `admin@greatwestern.local`
+- `driver@greatwestern.local`
+
+## Checks
 
 ```bash
 npm run lint
-npm run build
+npm run build-no-db
 ```
 
 ## Deployment on Render
 
-Static Vite app: publish the `dist` folder after `npm run build`.
+Use the Blueprint in [`render.yaml`](render.yaml):
 
-1. In [Render](https://dashboard.render.com), create a **Static Site** and connect this GitHub repository (or use **Blueprints** and point at `render.yaml` in the repo).
-2. Use **Build command:** `npm ci && npm run build` and **Publish directory:** `dist`.
-3. Optional: open the service **Settings → Build & Deploy → Deploy Hook**, create a hook, then add it to GitHub as repository secret **`RENDER_DEPLOY_HOOK_URL`** so pushes to `main` can trigger a deploy via `.github/workflows/render_workflow.yml`.
+1. Create a **Blueprint** (or Web Service + Postgres) from this repo.
+2. Web service: Node runtime, `npm install --include=dev && npm run render:build`, pre-deploy `npm run render:migrate`, start `npm start`.
+3. Set `NEXTAUTH_URL` to the public service URL; `DATABASE_URL` and `NEXTAUTH_SECRET` come from the blueprint.
+4. Set email vars for invites / password reset (Gmail app password):
+   - `EMAIL_FROM=DropBuddy <ozgurakgun@gmail.com>`
+   - `SMTP_HOST=smtp.gmail.com`
+   - `SMTP_PORT=587`
+   - `SMTP_USER=ozgurakgun@gmail.com`
+   - `SMTP_PASS=<gmail-app-password>`
+5. Optional: create a Deploy Hook and store it as GitHub secret `RENDER_DEPLOY_HOOK_URL` so pushes to `main` can trigger deploy via `.github/workflows/render_workflow.yml`.
+
+Health check: `/api/system/status`.
+
+## Email & accounts
+
+Outbound mail uses nodemailer over SMTP (same pattern as workforce / timetabling).
+
+- Public signup at `/auth/signup` (workforce-style): create account → verification email → sign in
+- Superadmin: create a restaurant + invite its admin (`/superadmin/tenants`), or invite more users (`/superadmin/users`)
+- Restaurant admin: invite drivers or additional admins (`/restaurant/team`)
+- Invited users set a password from the email link; anyone can use `/auth/forgot-password`
 
 ## Contributor / agent workflow
 
-See [`workflow.md`](workflow.md) for PR comments (prompt audit trail), commit style, and CI expectations.
+See [`workflow.md`](workflow.md) for PR prompt comments, commit style, and CI expectations.
