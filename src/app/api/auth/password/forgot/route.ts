@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { sendPasswordResetEmail } from '@/lib/auth-emails'
+import { sendPasswordResetEmail, sendVerificationEmail } from '@/lib/auth-emails'
 import { createAuthToken } from '@/lib/auth-tokens'
 import { prisma } from '@/lib/prisma'
 
@@ -19,11 +19,25 @@ export async function POST(request: Request) {
   }
 
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email } })
-  if (!user) {
+  if (!user?.password) {
     return NextResponse.json({ message: genericMessage })
   }
 
   try {
+    if (!user.emailVerified) {
+      const token = await createAuthToken(user.id, 'EMAIL_VERIFICATION', 60 * 24)
+      await sendVerificationEmail({
+        email: user.email,
+        name: user.name,
+        token: token.token,
+        expiresInLabel: 'in 24 hours',
+      })
+      return NextResponse.json({
+        message:
+          'That account is not verified yet. We sent a new verification email — confirm it before signing in or resetting your password.',
+      })
+    }
+
     const token = await createAuthToken(user.id, 'PASSWORD_RESET', 60)
     await sendPasswordResetEmail({
       email: user.email,

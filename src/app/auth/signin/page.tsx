@@ -6,7 +6,9 @@ export default function SignInPage() {
     <div className="auth-card">
       <p className="eyebrow">DropBuddy</p>
       <h1>Sign in</h1>
-      <p className="muted">Use a seeded demo account or your tenant credentials.</p>
+      <p className="muted">
+        Sign in with a verified account. New here? Create an account and confirm your email first.
+      </p>
       <Suspense fallback={<p className="muted">Loading…</p>}>
         <SignInForm />
       </Suspense>

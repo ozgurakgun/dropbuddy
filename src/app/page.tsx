@@ -10,9 +10,11 @@ export default async function HomePage() {
     ? '/superadmin/tenants'
     : session?.user.isDriver
       ? '/driver'
-      : session?.user.tenantId
+      : session?.user.isRestaurantAdmin
         ? '/restaurant/orders'
-        : '/auth/signin'
+        : session
+          ? '/pending'
+          : '/auth/signin'
 
   return (
     <div className="home-hero">
@@ -24,7 +26,7 @@ export default async function HomePage() {
       </p>
       <div className="home-actions">
         <Link href={destination}>{session ? 'Open app' : 'Sign in'}</Link>
-        <Link href="/auth/signin">Auth</Link>
+        {session ? null : <Link href="/auth/signup">Create account</Link>}
       </div>
     </div>
   )

@@ -76,6 +76,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid credentials')
         }
 
+        if (!user.emailVerified) {
+          throw new Error('Please verify your email address before signing in.')
+        }
+
         const valid = await bcrypt.compare(credentials.password, user.password)
         if (!valid) {
           throw new Error('Invalid credentials')
@@ -136,5 +140,5 @@ export function homePathForUser(user: {
   if (user.isSuperAdmin) return '/superadmin/tenants'
   if (user.isRestaurantAdmin) return '/restaurant/orders'
   if (user.isDriver) return '/driver'
-  return '/auth/signin'
+  return '/pending'
 }

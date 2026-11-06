@@ -55,6 +55,7 @@ model User {
 enum AuthTokenType {
   INVITE
   PASSWORD_RESET
+  EMAIL_VERIFICATION
 }
 
 model AuthToken {

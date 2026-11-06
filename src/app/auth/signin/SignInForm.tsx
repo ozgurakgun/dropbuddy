@@ -53,6 +53,8 @@ export function SignInForm() {
       </form>
       <p className="muted">
         <Link href="/auth/forgot-password">Forgot password?</Link>
+        {' · '}
+        <Link href="/auth/signup">Create account</Link>
       </p>
     </>
   )

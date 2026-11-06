@@ -19,10 +19,13 @@ async function main() {
     },
   })
 
+  const verifiedAt = new Date()
+
   const superadmin = await prisma.user.upsert({
     where: { email: 'superadmin@dropbuddy.local' },
     update: {
       password: passwordHash,
+      emailVerified: verifiedAt,
       isSuperAdmin: true,
       isRestaurantAdmin: false,
       isDriver: false,
@@ -32,6 +35,7 @@ async function main() {
       email: 'superadmin@dropbuddy.local',
       name: 'DropBuddy Superadmin',
       password: passwordHash,
+      emailVerified: verifiedAt,
       isSuperAdmin: true,
     },
   })
@@ -40,6 +44,7 @@ async function main() {
     where: { email: 'admin@greatwestern.local' },
     update: {
       password: passwordHash,
+      emailVerified: verifiedAt,
       isRestaurantAdmin: true,
       isDriver: false,
       isSuperAdmin: false,
@@ -49,6 +54,7 @@ async function main() {
       email: 'admin@greatwestern.local',
       name: 'Restaurant Admin',
       password: passwordHash,
+      emailVerified: verifiedAt,
       isRestaurantAdmin: true,
       tenantId: tenant.id,
     },
@@ -58,6 +64,7 @@ async function main() {
     where: { email: 'driver@greatwestern.local' },
     update: {
       password: passwordHash,
+      emailVerified: verifiedAt,
       isDriver: true,
       isRestaurantAdmin: false,
       isSuperAdmin: false,
@@ -67,6 +74,7 @@ async function main() {
       email: 'driver@greatwestern.local',
       name: 'Demo Driver',
       password: passwordHash,
+      emailVerified: verifiedAt,
       isDriver: true,
       tenantId: tenant.id,
     },

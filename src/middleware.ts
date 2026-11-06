@@ -33,5 +33,5 @@ export default withAuth(
 )
 
 export const config = {
-  matcher: ['/superadmin/:path*', '/restaurant/:path*', '/driver/:path*'],
+  matcher: ['/superadmin/:path*', '/restaurant/:path*', '/driver/:path*', '/pending'],
 }

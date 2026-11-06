@@ -68,6 +68,7 @@ Health check: `/api/system/status`.
 
 Outbound mail uses nodemailer over SMTP (same pattern as workforce / timetabling).
 
+- Public signup at `/auth/signup` (workforce-style): create account → verification email → sign in
 - Superadmin: create a restaurant + invite its admin (`/superadmin/tenants`), or invite more users (`/superadmin/users`)
 - Restaurant admin: invite drivers or additional admins (`/restaurant/team`)
 - Invited users set a password from the email link; anyone can use `/auth/forgot-password`

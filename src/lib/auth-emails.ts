@@ -39,6 +39,33 @@ function buildEmailHtml({
   `
 }
 
+export async function sendVerificationEmail({
+  email,
+  name,
+  token,
+  expiresInLabel,
+}: {
+  email: string
+  name?: string | null
+  token: string
+  expiresInLabel: string
+}) {
+  const verifyUrl = new URL('/auth/verify', getBaseUrl())
+  verifyUrl.searchParams.set('token', token)
+
+  return sendEmail({
+    to: email,
+    subject: 'Verify your DropBuddy account',
+    html: buildEmailHtml({
+      title: `Confirm your email${name ? `, ${name}` : ''}`,
+      description: `Thanks for signing up for DropBuddy. Please confirm your email address to activate your account. This link expires ${expiresInLabel}.`,
+      ctaLabel: 'Verify email',
+      ctaUrl: verifyUrl.toString(),
+      footer: 'If you did not create this account, you can safely ignore this message.',
+    }),
+  })
+}
+
 export async function sendInviteEmail({
   email,
   name,
