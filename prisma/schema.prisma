@@ -46,9 +46,31 @@ model User {
   tenant         Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   accounts       Account[]
   sessions       Session[]
+  authTokens     AuthToken[]
   driverProfile  DriverProfile?
   punchEvents    PunchEvent[]
   locationPings  LocationPing[]
+}
+
+enum AuthTokenType {
+  INVITE
+  PASSWORD_RESET
+}
+
+model AuthToken {
+  id         String        @id @default(cuid())
+  type       AuthTokenType
+  token      String        @unique
+  userId     String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([type, token])
+  @@index([userId, type])
 }
 
 model Account {

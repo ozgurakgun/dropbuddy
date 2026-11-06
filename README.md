@@ -54,9 +54,19 @@ Use the Blueprint in [`render.yaml`](render.yaml):
 1. Create a **Blueprint** (or Web Service + Postgres) from this repo.
 2. Web service: Node runtime, `npm install --include=dev && npm run render:build`, pre-deploy `npm run render:migrate`, start `npm start`.
 3. Set `NEXTAUTH_URL` to the public service URL; `DATABASE_URL` and `NEXTAUTH_SECRET` come from the blueprint.
-4. Optional: create a Deploy Hook and store it as GitHub secret `RENDER_DEPLOY_HOOK_URL` so pushes to `main` can trigger deploy via `.github/workflows/render_workflow.yml`.
+4. Set email vars for invites / password reset (Gmail app password):
+   - `EMAIL_FROM=DropBuddy <ozgurakgun@gmail.com>`
+   - `SMTP_HOST=smtp.gmail.com`
+   - `SMTP_PORT=587`
+   - `SMTP_USER=ozgurakgun@gmail.com`
+   - `SMTP_PASS=<gmail-app-password>`
+5. Optional: create a Deploy Hook and store it as GitHub secret `RENDER_DEPLOY_HOOK_URL` so pushes to `main` can trigger deploy via `.github/workflows/render_workflow.yml`.
 
 Health check: `/api/system/status`.
+
+## Email
+
+Outbound mail uses nodemailer over SMTP (same pattern as workforce / timetabling). Superadmins can create a restaurant tenant and invite a restaurant admin by email; users can also request a password reset from `/auth/forgot-password`.
 
 ## Contributor / agent workflow
 
